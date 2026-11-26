@@ -47,7 +47,17 @@ jobs:
           adb start-server
           ls -l ~/.local/share/godot/export_templates/4.4.1.stable/android_debug.apk
           ls -l "$ANDROID_HOME/build-tools"
-          GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$HOME/.android/debug.keystore" GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android godot --headless --verbose --path . --export-debug Android build/Leonida.apk
+          godot --headless --path . --export-pack Android build/game.pck
+          mkdir -p /tmp/apkwork/assets
+          cp build/game.pck /tmp/apkwork/assets/game.pck
+          cp ~/.local/share/godot/export_templates/4.4.1.stable/android_debug.apk /tmp/apkwork/raw.apk
+          cd /tmp/apkwork
+          zip -d raw.apk 'META-INF/*' || true
+          zip -0 raw.apk assets/game.pck
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -f -p 4 raw.apk aligned.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks "$HOME/.android/debug.keystore" --ks-pass pass:android --key-pass pass:android --ks-key-alias androiddebugkey --out "$GITHUB_WORKSPACE/build/Leonida.apk" aligned.apk
+          cd "$GITHUB_WORKSPACE"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify build/Leonida.apk
           test -s build/Leonida.apk
       - uses: actions/upload-artifact@v4
         with:
