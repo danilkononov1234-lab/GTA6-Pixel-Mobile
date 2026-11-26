@@ -1,6 +1,8 @@
 extends Node3D
 var player: CharacterBody3D
 var camera: Camera3D
+var cars: Array[CharacterBody3D] = []
+var driving: CharacterBody3D
 var movement := Vector2.ZERO
 var buttons := {}
 var rng := RandomNumberGenerator.new()
@@ -64,6 +66,33 @@ func _ready():
 	mat.albedo_color = Color("#e86c80")
 	avatar.material_override = mat
 	player.add_child(avatar)
+	for i in range(12):
+		var car := CharacterBody3D.new()
+		add_child(car)
+		car.position = Vector3(2,0.65,8+i*12)
+		var hit := CollisionShape3D.new()
+		var bounds := BoxShape3D.new()
+		bounds.size = Vector3(2,1.3,4)
+		hit.shape = bounds
+		car.add_child(hit)
+		var body_mesh := MeshInstance3D.new()
+		var car_box := BoxMesh.new()
+		car_box.size = Vector3(2,0.8,4)
+		body_mesh.mesh = car_box
+		var paint := StandardMaterial3D.new()
+		paint.albedo_color = Color.from_hsv(rng.randf(),0.8,0.8)
+		body_mesh.material_override = paint
+		car.add_child(body_mesh)
+		var cabin := MeshInstance3D.new()
+		var cabin_box := BoxMesh.new()
+		cabin_box.size = Vector3(1.6,0.65,1.9)
+		cabin.mesh = cabin_box
+		cabin.position.y = 0.6
+		var glass := StandardMaterial3D.new()
+		glass.albedo_color = Color("#34495e")
+		cabin.material_override = glass
+		car.add_child(cabin)
+		cars.append(car)
 	camera = Camera3D.new()
 	add_child(camera)
 	camera.current = true
@@ -83,12 +112,41 @@ func _ready():
 		ui.add_child(b)
 		buttons[b] = item[2]
 
+	var enter := Button.new()
+	enter.text = "Сесть / выйти"
+	enter.position = Vector2(480,280)
+	enter.size = Vector2(145,60)
+	ui.add_child(enter)
+	enter.pressed.connect(toggle_car)
+
+func toggle_car():
+	if is_instance_valid(driving):
+		player.position = driving.position + driving.transform.basis.x * 2.5 + Vector3.UP
+		player.show()
+		player.get_node("CollisionShape3D").set_deferred("disabled",false)
+		driving = null
+		return
+	for car in cars:
+		if player.position.distance_to(car.position) < 5:
+			driving = car
+			player.hide()
+			player.get_node("CollisionShape3D").set_deferred("disabled",true)
+			break
+
 func _physics_process(delta):
 	movement = Input.get_vector("ui_left","ui_right","ui_up","ui_down")
 	for b in buttons:
 		if b.button_pressed:
 			movement += buttons[b]
 	movement = movement.limit_length()
+	if is_instance_valid(driving):
+		driving.rotate_y(-movement.x*delta*1.8)
+		driving.velocity = driving.transform.basis.z * movement.y * 20
+		driving.move_and_slide()
+		player.position = driving.position
+		camera.position = camera.position.lerp(driving.position + driving.transform.basis.z*8 + Vector3.UP*4, minf(delta*6,1))
+		camera.look_at(driving.position)
+		return
 	player.velocity.x = movement.x*7
 	player.velocity.z = movement.y*7
 	if not player.is_on_floor():
