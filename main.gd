@@ -102,6 +102,7 @@ func _ready():
 	var human := Node3D.new()
 	human.name = "Human"
 	hero = human
+	human.hide()
 	player.add_child(human)
 	for part in [[Vector3(0,0.18,0),Vector3(0.48,0.65,0.28),Color("#eee6d2")],[Vector3(0,0.66,0),Vector3(0.29,0.32,0.29),Color("#bc825c")],[Vector3(0,0.84,0),Vector3(0.31,0.12,0.31),Color("#30251f")],[Vector3(-0.32,0.12,0),Vector3(0.14,0.59,0.17),Color("#bc825c")],[Vector3(0.32,0.12,0),Vector3(0.14,0.59,0.17),Color("#bc825c")],[Vector3(-0.13,-0.48,0),Vector3(0.22,0.67,0.24),Color("#344b68")],[Vector3(0.13,-0.48,0),Vector3(0.22,0.67,0.24),Color("#344b68")]]:
 		var limb := MeshInstance3D.new()
@@ -115,6 +116,13 @@ func _ready():
 		surface.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 		limb.material_override = surface
 		human.add_child(limb)
+	var sprite := Sprite3D.new()
+	sprite.texture = hero_sprite()
+	sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	sprite.pixel_size = 0.035
+	sprite.position.y = 0.15
+	player.add_child(sprite)
 	for i in range(12):
 		var car := CharacterBody3D.new()
 		add_child(car)
@@ -145,7 +153,7 @@ func _ready():
 	camera = Camera3D.new()
 	add_child(camera)
 	camera.current = true
-	camera.position = player.position + Vector3(0,2.1,4.5)
+	camera.position = player.position + Vector3(0,1.15,2.8)
 	camera.look_at(player.position)
 	for i in range(24):
 		var npc := Node3D.new()
@@ -171,7 +179,7 @@ func _ready():
 	ui.add_child(label)
 	radar = Radar.new()
 	radar.world = self
-	radar.position = Vector2(12,55)
+	radar.position = Vector2(12,125)
 	radar.size = Vector2(100,100)
 	ui.add_child(radar)
 	for item in [["↑",Vector2(60,235),Vector2(0,-1)],["↓",Vector2(60,300),Vector2(0,1)],["←",Vector2(5,300),Vector2(-1,0)],["→",Vector2(115,300),Vector2(1,0)]]:
@@ -244,8 +252,8 @@ func _physics_process(delta):
 		stride = 0.0
 	for i in range(3,7):
 		hero.get_child(i).rotation.x = sin(stride) * (0.55 if i % 2 == 0 else -0.55)
-	camera.position = camera.position.lerp(player.position+Vector3(0,2.1,4.5),minf(delta*8,1))
-	camera.look_at(player.position+Vector3(0,0.5,0))
+	camera.position = camera.position.lerp(player.position+Vector3(0,1.15,2.8),minf(delta*8,1))
+	camera.look_at(player.position+Vector3(0,0.9,-2))
 
 func pixel_texture() -> ImageTexture:
 	if textures.has("grain"):
@@ -281,3 +289,15 @@ class Radar extends Control:
 				draw_line(center+Vector2(-extent,offset),center+Vector2(extent,offset),Color("#687a83"),3)
 		draw_arc(center,48,0,TAU,48,Color.WHITE,2)
 		draw_colored_polygon(PackedVector2Array([center+Vector2(0,-6),center+Vector2(-4,5),center+Vector2(4,5)]),Color.WHITE)
+
+func hero_sprite() -> ImageTexture:
+	var img := Image.create(40,64,false,Image.FORMAT_RGBA8)
+	img.fill(Color.TRANSPARENT)
+	var outline := Color("#29212b")
+	var skin := Color("#b77c53")
+	var light := Color("#d99c70")
+	var shirt := Color("#eee5cd")
+	var denim := Color("#38516a")
+	for part in [[Rect2i(13,2,14,16),outline],[Rect2i(15,4,10,12),skin],[Rect2i(14,3,12,8),Color("#392c29")],[Rect2i(17,16,6,5),skin],[Rect2i(9,19,22,25),outline],[Rect2i(12,20,16,22),shirt],[Rect2i(5,22,8,25),outline],[Rect2i(27,22,8,25),outline],[Rect2i(7,24,5,21),skin],[Rect2i(28,24,5,21),light],[Rect2i(11,42,18,7),outline],[Rect2i(12,45,7,15),denim],[Rect2i(21,45,7,15),denim],[Rect2i(11,59,9,4),outline],[Rect2i(20,59,9,4),outline],[Rect2i(13,23,2,17),Color("#b9b4a4")],[Rect2i(24,23,2,17),Color("#fff7e1")],[Rect2i(14,40,12,2),Color("#aaa394")],[Rect2i(15,46,2,12),Color("#526c85")],[Rect2i(23,46,2,12),Color("#526c85")]]:
+		img.fill_rect(part[0],part[1])
+	return ImageTexture.create_from_image(img)
