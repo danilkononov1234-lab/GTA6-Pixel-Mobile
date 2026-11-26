@@ -48,6 +48,19 @@ func _ready():
 		for z in range(-5,5):
 			var h := rng.randf_range(5,25)
 			block(Vector3(x*32+16,h/2,z*32+16),Vector3(17,h,17),Color.from_hsv(rng.randf(),0.27,0.85))
+	# Coastal district and island causeway
+	block(Vector3(0,-0.35,205),Vector3(400,0.5,10),Color("#e8cf91"))
+	block(Vector3(0,-0.8,280),Vector3(600,0.3,150),Color("#268fae"),false)
+	block(Vector3(0,-0.5,275),Vector3(12,1,150),Color("#555b64"))
+	block(Vector3(0,-0.5,370),Vector3(120,1,60),Color("#d6c69a"))
+	for i in range(16):
+		var p := Vector3(-180+i*23,0,190)
+		block(p+Vector3(0,2,0),Vector3(0.45,4,0.45),Color("#856341"),false)
+		for j in range(5):
+			var leaf := block(p+Vector3(0,4,0),Vector3(0.8,0.25,3.5),Color("#388d50"),false)
+			leaf.rotation.y = j*TAU/5
+	for i in range(8):
+		block(Vector3(-48+i*13,2,375),Vector3(9,4,12),Color("#f2b69d"))
 	player = CharacterBody3D.new()
 	add_child(player)
 	player.position = Vector3(0,1,0)
@@ -56,6 +69,7 @@ func _ready():
 	capsule.height = 1.8
 	capsule.radius = 0.35
 	collider.shape = capsule
+	collider.name = "CollisionShape3D"
 	player.add_child(collider)
 	var avatar := MeshInstance3D.new()
 	var body := CapsuleMesh.new()
@@ -111,6 +125,8 @@ func _ready():
 		b.size = Vector2(52,52)
 		ui.add_child(b)
 		buttons[b] = item[2]
+		b.button_down.connect(func(): b.set_meta("held",true))
+		b.button_up.connect(func(): b.set_meta("held",false))
 
 	var enter := Button.new()
 	enter.text = "Сесть / выйти"
@@ -136,7 +152,7 @@ func toggle_car():
 func _physics_process(delta):
 	movement = Input.get_vector("ui_left","ui_right","ui_up","ui_down")
 	for b in buttons:
-		if b.button_pressed:
+		if b.button_pressed or (b.has_meta("held") and b.get_meta("held")):
 			movement += buttons[b]
 	movement = movement.limit_length()
 	if is_instance_valid(driving):
