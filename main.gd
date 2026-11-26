@@ -52,6 +52,14 @@ func _ready():
 		for z in range(-5,5):
 			var h := rng.randf_range(5,25)
 			block(Vector3(x*32+16,h/2,z*32+16),Vector3(17,h,17),Color.from_hsv(rng.randf(),0.27,0.85))
+			for floor_index in range(1,int(h/3)):
+				for column in range(-2,3):
+					block(Vector3(x*32+16+column*3,floor_index*3,z*32+24.55),Vector3(1.7,1.6,0.12),Color("#40576a"),false)
+					block(Vector3(x*32+16+column*3,floor_index*3,z*32+7.45),Vector3(1.7,1.6,0.12),Color("#40576a"),false)
+	for road in range(-5,6):
+		for stripe in range(-30,31):
+			block(Vector3(road*32,0.065,stripe*6),Vector3(0.13,0.02,2.5),Color("#e7d6a0"),false)
+			block(Vector3(stripe*6,0.07,road*32),Vector3(2.5,0.02,0.13),Color("#e7d6a0"),false)
 	# Coastal district and island causeway
 	block(Vector3(0,-0.35,205),Vector3(400,0.5,10),Color("#e8cf91"))
 	block(Vector3(0,-0.8,280),Vector3(600,0.3,150),Color("#268fae"),false)
@@ -83,7 +91,21 @@ func _ready():
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = Color("#e86c80")
 	avatar.material_override = mat
+	avatar.hide()
 	player.add_child(avatar)
+	var human := Node3D.new()
+	human.name = "Human"
+	player.add_child(human)
+	for part in [[Vector3(0,0.18,0),Vector3(0.48,0.65,0.28),Color("#eee6d2")],[Vector3(0,0.66,0),Vector3(0.29,0.32,0.29),Color("#bc825c")],[Vector3(0,0.84,0),Vector3(0.31,0.12,0.31),Color("#30251f")],[Vector3(-0.32,0.12,0),Vector3(0.14,0.59,0.17),Color("#bc825c")],[Vector3(0.32,0.12,0),Vector3(0.14,0.59,0.17),Color("#bc825c")],[Vector3(-0.13,-0.48,0),Vector3(0.22,0.67,0.24),Color("#344b68")],[Vector3(0.13,-0.48,0),Vector3(0.22,0.67,0.24),Color("#344b68")]]:
+		var limb := MeshInstance3D.new()
+		var cube := BoxMesh.new()
+		cube.size = part[1]
+		limb.mesh = cube
+		limb.position = part[0]
+		var surface := StandardMaterial3D.new()
+		surface.albedo_color = part[2]
+		limb.material_override = surface
+		human.add_child(limb)
 	for i in range(12):
 		var car := CharacterBody3D.new()
 		add_child(car)
@@ -114,7 +136,7 @@ func _ready():
 	camera = Camera3D.new()
 	add_child(camera)
 	camera.current = true
-	camera.position = player.position + Vector3(0,4,7)
+	camera.position = player.position + Vector3(0,2.1,4.5)
 	camera.look_at(player.position)
 	for i in range(24):
 		var npc := Node3D.new()
@@ -181,7 +203,7 @@ func _physics_process(delta):
 	if mission == 1 and player.position.z > 350:
 		mission = 2
 		cash += 500
-	hud.text = "LEONIDA   $%d   HP 100\\n%s" % [cash, ["Доберись до пляжа","Пересеки мост","Задания выполнены"][mission]]
+	hud.text = "LEONIDA   $%d   HP 100\n%s" % [cash, ["Доберись до пляжа","Пересеки мост","Задания выполнены"][mission]]
 	movement = Input.get_vector("ui_left","ui_right","ui_up","ui_down")
 	for b in buttons:
 		if b.button_pressed or (b.has_meta("held") and b.get_meta("held")):
@@ -200,5 +222,5 @@ func _physics_process(delta):
 	if not player.is_on_floor():
 		player.velocity.y -= 20*delta
 	player.move_and_slide()
-	camera.position = camera.position.lerp(player.position+Vector3(0,4,7),minf(delta*8,1))
+	camera.position = camera.position.lerp(player.position+Vector3(0,2.1,4.5),minf(delta*8,1))
 	camera.look_at(player.position+Vector3(0,0.5,0))
