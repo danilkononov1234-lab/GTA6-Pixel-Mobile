@@ -42,15 +42,18 @@ class Street extends Node2D:
 		var k := 145.0/maxf(z,0.5)
 		return Vector2(320+(x-lane)*k,125+(2.1-y)*k)
 	func _draw():
-		rect(0,0,640,360,"#86c9d6")
-		rect(0,125,640,235,"#d8bba0")
+		for y in range(125):
+			var c := Color("#a64b9b").lerp(Color("#ffc18d"),float(y)/125.0)
+			draw_rect(Rect2(0,y,640,1),c)
+		draw_circle(Vector2(420,102),19,Color("#ffe1a5"))
+		rect(0,125,640,235,"#d69b91")
 		for i in range(22):
 			var x := float(i*31)
 			var h := float(12+(i*37)%65)
-			rect(x,125-h,25,h,"#7596a5")
+			rect(x,125-h,25,h,"#765180")
 			for j in range(int(h/9)):
-				rect(x+4,125-h+j*9,3,4,"#c1d3cf")
-		poly([Vector2(305,125),Vector2(335,125),project(4,0,1.25),project(-4,0,1.25)],"#454b59")
+				rect(x+4,125-h+j*9,3,4,"#e6a4ad")
+		poly([Vector2(305,125),Vector2(335,125),project(4,0,1.25),project(-4,0,1.25)],"#65516f")
 		for i in range(40,0,-1):
 			var z := float(i)*3.0-fposmod(distance,3.0)
 			if z<1.4: continue
@@ -78,7 +81,7 @@ class Street extends Node2D:
 		draw_arc(Vector2(52,190),40,0,TAU,48,Color("#e8d9b5"),2)
 		var font := ThemeDB.fallback_font
 		draw_string(font,Vector2(465,25),"$%06d  HP 100"%cash,HORIZONTAL_ALIGNMENT_LEFT,-1,16,Color.WHITE)
-		draw_string(font,Vector2(465,43),"LEONIDA",HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("#fff0c5"))
+		draw_string(font,Vector2(465,43),"VICE CITY",HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("#fff0c5"))
 	func facade(side:float,z:float,i:int):
 		var x := side*6.0
 		var h := float(4+i%4)
@@ -86,7 +89,7 @@ class Street extends Node2D:
 		var b := project(x,0,z+6.5)
 		var c := project(x,h,z+6.5)
 		var d := project(x,h,z)
-		var palette := ["#e0b797","#d5c7a4","#b4c7bc","#d9a6a0"]
+		var palette := ["#efae98","#e8c1a6","#bba7c1","#d88da9"]
 		poly([a,b,c,d],palette[i%4])
 		poly([a,project(x+side*4,0,z),project(x+side*4,h,z),d],"#8c8b83")
 		for floor_i in range(int(h/1.5)):
@@ -112,7 +115,7 @@ class Street extends Node2D:
 		draw_rect(Rect2(p-Vector2(k*0.95,k*0.55),Vector2(k*1.9,k*0.65)),Color("#252936"))
 		for side in [-1,1]:
 			draw_circle(p+Vector2(side*k*0.73,0),k*0.22,Color("#20232b"))
-		poly([p+Vector2(-k,-k*0.2),p+Vector2(-k*0.85,-k*0.65),p+Vector2(k*0.85,-k*0.65),p+Vector2(k,-k*0.2)],"#d7d5bb")
+		poly([p+Vector2(-k,-k*0.2),p+Vector2(-k*0.85,-k*0.65),p+Vector2(k*0.85,-k*0.65),p+Vector2(k,-k*0.2)],"#e74c9b")
 		poly([p+Vector2(-k*0.7,-k*0.65),p+Vector2(-k*0.45,-k*1.05),p+Vector2(k*0.45,-k*1.05),p+Vector2(k*0.7,-k*0.65)],"#394d5e")
 		for side in [-1,1]:
 			draw_rect(Rect2(p+Vector2(side*k*0.68-k*0.15,-k*0.35),Vector2(k*0.3,k*0.13)),Color("#d84b49"))
@@ -136,6 +139,15 @@ class Street extends Node2D:
 		poly([Vector2(-9,-46),Vector2(-5,-50),Vector2(6,-50),Vector2(10,-45),Vector2(9,-33),Vector2(5,-29),Vector2(-6,-29),Vector2(-10,-35)],"#b87e56")
 		poly([Vector2(-10,-46),Vector2(-6,-51),Vector2(6,-51),Vector2(11,-46),Vector2(9,-36),Vector2(5,-34),Vector2(-7,-35),Vector2(-10,-40)],"#352b2a")
 		rect(-6,-48,10,2,"#594039")
+		draw_polyline(PackedVector2Array([Vector2(-10,-26),Vector2(-15,-18),Vector2(-11,12),Vector2(11,12),Vector2(15,-18),Vector2(10,-26)]),Color("#49323e"),1.5)
+		draw_line(Vector2(-6,-14),Vector2(-2,1),Color("#b59b9c"),1.5)
+		draw_line(Vector2(6,-14),Vector2(2,1),Color("#b59b9c"),1.5)
+		draw_line(Vector2(-8,8),Vector2(0,5),Color("#c3a9a5"),1)
+		draw_line(Vector2(0,5),Vector2(8,8),Color("#c3a9a5"),1)
+		draw_line(Vector2(-18,-16),Vector2(-20,-5),Color("#e8aa80"),2)
+		draw_line(Vector2(18,-16),Vector2(20,-5),Color("#e8aa80"),2)
+		rect(-8,17,5,6,"#43536b")
+		rect(3,17,5,6,"#43536b")
 		draw_set_transform(Vector2.ZERO)
 	func draw_ellipse_shadow():
 		draw_colored_polygon(PackedVector2Array([Vector2(-20,49),Vector2(-12,45),Vector2(15,45),Vector2(23,49),Vector2(14,53),Vector2(-15,53)]),Color("#30343b"))
