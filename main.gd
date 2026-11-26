@@ -1,6 +1,10 @@
 extends Node3D
 var player: CharacterBody3D
 var camera: Camera3D
+var pedestrians: Array[Node3D] = []
+var hud: Label
+var mission := 0
+var cash := 0
 var cars: Array[CharacterBody3D] = []
 var driving: CharacterBody3D
 var movement := Vector2.ZERO
@@ -112,9 +116,25 @@ func _ready():
 	camera.current = true
 	camera.position = player.position + Vector3(0,4,7)
 	camera.look_at(player.position)
+	for i in range(24):
+		var npc := Node3D.new()
+		add_child(npc)
+		npc.position = Vector3(5.5,0,-140+i*12)
+		var model := MeshInstance3D.new()
+		var mesh := CapsuleMesh.new()
+		mesh.height = 1.65
+		mesh.radius = 0.28
+		model.mesh = mesh
+		model.position.y = 0.85
+		var material := StandardMaterial3D.new()
+		material.albedo_color = Color.from_hsv(rng.randf(),0.6,0.85)
+		model.material_override = material
+		npc.add_child(model)
+		pedestrians.append(npc)
 	var ui := CanvasLayer.new()
 	add_child(ui)
 	var label := Label.new()
+	hud = label
 	label.text = "LEONIDA • ПРОТОТИП"
 	label.position = Vector2(16,12)
 	ui.add_child(label)
@@ -150,6 +170,18 @@ func toggle_car():
 			break
 
 func _physics_process(delta):
+	for i in range(pedestrians.size()):
+		var npc := pedestrians[i]
+		npc.position.z += delta * (1.2 if i % 2 == 0 else -1.2)
+		if absf(npc.position.z) > 175:
+			npc.position.z = -signf(npc.position.z)*174
+	if mission == 0 and player.position.z > 180:
+		mission = 1
+		cash += 250
+	if mission == 1 and player.position.z > 350:
+		mission = 2
+		cash += 500
+	hud.text = "LEONIDA   $%d   HP 100\\n%s" % [cash, ["Доберись до пляжа","Пересеки мост","Задания выполнены"][mission]]
 	movement = Input.get_vector("ui_left","ui_right","ui_up","ui_down")
 	for b in buttons:
 		if b.button_pressed or (b.has_meta("held") and b.get_meta("held")):
