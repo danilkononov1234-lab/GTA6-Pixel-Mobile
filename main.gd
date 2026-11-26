@@ -3,6 +3,10 @@ var player: CharacterBody3D
 var camera: Camera3D
 var pedestrians: Array[Node3D] = []
 var hud: Label
+var radar: Control
+var hero: Node3D
+var stride := 0.0
+var textures := {}
 var mission := 0
 var cash := 0
 var cars: Array[CharacterBody3D] = []
@@ -21,6 +25,8 @@ func block(pos: Vector3, dimensions: Vector3, color: Color, solid := true) -> No
 	mesh.mesh = shape
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = color
+	mat.albedo_texture = pixel_texture()
+	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	mesh.material_override = mat
 	root.add_child(mesh)
 	if solid:
@@ -95,6 +101,7 @@ func _ready():
 	player.add_child(avatar)
 	var human := Node3D.new()
 	human.name = "Human"
+	hero = human
 	player.add_child(human)
 	for part in [[Vector3(0,0.18,0),Vector3(0.48,0.65,0.28),Color("#eee6d2")],[Vector3(0,0.66,0),Vector3(0.29,0.32,0.29),Color("#bc825c")],[Vector3(0,0.84,0),Vector3(0.31,0.12,0.31),Color("#30251f")],[Vector3(-0.32,0.12,0),Vector3(0.14,0.59,0.17),Color("#bc825c")],[Vector3(0.32,0.12,0),Vector3(0.14,0.59,0.17),Color("#bc825c")],[Vector3(-0.13,-0.48,0),Vector3(0.22,0.67,0.24),Color("#344b68")],[Vector3(0.13,-0.48,0),Vector3(0.22,0.67,0.24),Color("#344b68")]]:
 		var limb := MeshInstance3D.new()
@@ -104,6 +111,8 @@ func _ready():
 		limb.position = part[0]
 		var surface := StandardMaterial3D.new()
 		surface.albedo_color = part[2]
+		surface.albedo_texture = pixel_texture()
+		surface.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 		limb.material_override = surface
 		human.add_child(limb)
 	for i in range(12):
@@ -160,6 +169,11 @@ func _ready():
 	label.text = "LEONIDA • ПРОТОТИП"
 	label.position = Vector2(16,12)
 	ui.add_child(label)
+	radar = Radar.new()
+	radar.world = self
+	radar.position = Vector2(12,55)
+	radar.size = Vector2(100,100)
+	ui.add_child(radar)
 	for item in [["↑",Vector2(60,235),Vector2(0,-1)],["↓",Vector2(60,300),Vector2(0,1)],["←",Vector2(5,300),Vector2(-1,0)],["→",Vector2(115,300),Vector2(1,0)]]:
 		var b := Button.new()
 		b.text = item[0]
@@ -192,6 +206,7 @@ func toggle_car():
 			break
 
 func _physics_process(delta):
+	radar.queue_redraw()
 	for i in range(pedestrians.size()):
 		var npc := pedestrians[i]
 		npc.position.z += delta * (1.2 if i % 2 == 0 else -1.2)
@@ -222,5 +237,47 @@ func _physics_process(delta):
 	if not player.is_on_floor():
 		player.velocity.y -= 20*delta
 	player.move_and_slide()
+	if movement.length() > 0.1:
+		hero.rotation.y = atan2(-movement.x,-movement.y)
+		stride += delta*11
+	else:
+		stride = 0.0
+	for i in range(3,7):
+		hero.get_child(i).rotation.x = sin(stride) * (0.55 if i % 2 == 0 else -0.55)
 	camera.position = camera.position.lerp(player.position+Vector3(0,2.1,4.5),minf(delta*8,1))
 	camera.look_at(player.position+Vector3(0,0.5,0))
+
+func pixel_texture() -> ImageTexture:
+	if textures.has("grain"):
+		return textures["grain"]
+	var img := Image.create(16,16,false,Image.FORMAT_RGB8)
+	for y in range(16):
+		for x in range(16):
+			var v := 0.76 + float((x*17+y*31+x*y*7)%8)*0.032
+			img.set_pixel(x,y,Color(v,v,v))
+	var tex := ImageTexture.create_from_image(img)
+	textures["grain"] = tex
+	return tex
+
+class Radar extends Control:
+	var world: Node3D
+	func _draw():
+		var center := Vector2(50,50)
+		draw_circle(center,49,Color("#17282e"))
+		var p: Vector3 = world.player.position
+		for x in range(-5,6):
+			for z in range(-5,6):
+				var q := center + Vector2(x*32-p.x,z*32-p.z)*0.55
+				if q.distance_to(center)<43:
+					draw_rect(Rect2(q-Vector2(6,6),Vector2(12,12)),Color("#a7a08b"))
+		for x in range(-5,6):
+			var offset := (x*32-p.x)*0.55
+			if absf(offset)<44:
+				var extent := sqrt(44.0*44.0-offset*offset)
+				draw_line(center+Vector2(offset,-extent),center+Vector2(offset,extent),Color("#687a83"),3)
+			offset = (x*32-p.z)*0.55
+			if absf(offset)<44:
+				var extent := sqrt(44.0*44.0-offset*offset)
+				draw_line(center+Vector2(-extent,offset),center+Vector2(extent,offset),Color("#687a83"),3)
+		draw_arc(center,48,0,TAU,48,Color.WHITE,2)
+		draw_colored_polygon(PackedVector2Array([center+Vector2(0,-6),center+Vector2(-4,5),center+Vector2(4,5)]),Color.WHITE)
