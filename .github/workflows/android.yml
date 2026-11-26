@@ -47,13 +47,14 @@ jobs:
           adb start-server
           ls -l ~/.local/share/godot/export_templates/4.4.1.stable/android_debug.apk
           ls -l "$ANDROID_HOME/build-tools"
-          godot --headless --path . --export-pack Android build/game.pck
+          godot --headless --path . --export-pack Android build/game.zip
           mkdir -p /tmp/apkwork/assets
-          cp build/game.pck /tmp/apkwork/assets/game.pck
+          unzip -q build/game.zip -d /tmp/apkwork/assets
+          test -s /tmp/apkwork/assets/project.binary
           cp ~/.local/share/godot/export_templates/4.4.1.stable/android_debug.apk /tmp/apkwork/raw.apk
           cd /tmp/apkwork
           zip -d raw.apk 'META-INF/*' || true
-          zip -0 raw.apk assets/game.pck
+          zip -0 -r raw.apk assets
           "$ANDROID_HOME/build-tools/35.0.0/zipalign" -f -p 4 raw.apk aligned.apk
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks "$HOME/.android/debug.keystore" --ks-pass pass:android --key-pass pass:android --ks-key-alias androiddebugkey --out "$GITHUB_WORKSPACE/build/Leonida.apk" aligned.apk
           cd "$GITHUB_WORKSPACE"
