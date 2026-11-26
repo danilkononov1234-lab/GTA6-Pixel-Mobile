@@ -12,8 +12,10 @@ class Street extends Node2D:
 	var driving := false
 	var controls := {}
 	var cash := 0
+	var hero_art: ImageTexture
 	func _ready():
 		texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		hero_art = make_hero()
 		for item in [["↑",Vector2(65,245)],["↓",Vector2(65,300)],["←",Vector2(10,300)],["→",Vector2(120,300)],["Сесть / выйти",Vector2(475,300)]]:
 			var b := Button.new()
 			b.text = item[0]
@@ -70,7 +72,7 @@ class Street extends Node2D:
 				if i%2==0: palm(float(side)*5.1,z)
 		car(1.8,7.0+fposmod(-distance,10.0))
 		if driving: car(0,1.8)
-		else: hero()
+		else: draw_texture_rect(hero_art,Rect2(259,178+sin(Time.get_ticks_msec()*0.012)*2.0*float(walking),122,176),false)
 		draw_circle(Vector2(52,190),40,Color("#273b46"))
 		for i in range(-2,3):
 			var q := float(i*15)
@@ -100,6 +102,9 @@ class Street extends Node2D:
 				draw_line(project(x,y+0.4,zz),project(x,y+0.4,zz+1.15),Color("#91a5a1"),1)
 		draw_line(a,b,Color("#776f67"),2)
 		draw_line(d,c,Color("#fff0d0"),2)
+		for band in range(1,int(h)):
+			draw_line(project(x,float(band),z),project(x,float(band),z+6.5),Color("#ad8187"),1)
+		poly([project(x,1.2,z),project(x,1.2,z+6.5),project(x-side*0.65,0.9,z+6.5),project(x-side*0.65,0.9,z)],"#75465f")
 	func palm(x:float,z:float):
 		var p := project(x,0,z)
 		var t := project(x+0.35,4.7,z)
@@ -151,3 +156,29 @@ class Street extends Node2D:
 		draw_set_transform(Vector2.ZERO)
 	func draw_ellipse_shadow():
 		draw_colored_polygon(PackedVector2Array([Vector2(-20,49),Vector2(-12,45),Vector2(15,45),Vector2(23,49),Vector2(14,53),Vector2(-15,53)]),Color("#30343b"))
+
+	func make_hero() -> ImageTexture:
+		var img := Image.create(61,88,false,Image.FORMAT_RGBA8)
+		img.fill(Color.TRANSPARENT)
+		var shapes := [
+			[Color("#29212c"),[Vector2(23,3),Vector2(37,3),Vector2(42,9),Vector2(41,23),Vector2(36,28),Vector2(45,32),Vector2(52,43),Vector2(56,65),Vector2(50,72),Vector2(44,67),Vector2(43,87),Vector2(18,87),Vector2(17,67),Vector2(11,72),Vector2(5,65),Vector2(9,43),Vector2(16,32),Vector2(25,28),Vector2(20,23),Vector2(19,9)]],
+			[Color("#b86d50"),[Vector2(24,20),Vector2(37,20),Vector2(36,31),Vector2(43,34),Vector2(49,43),Vector2(53,63),Vector2(49,68),Vector2(45,64),Vector2(40,45),Vector2(21,45),Vector2(16,64),Vector2(12,68),Vector2(8,63),Vector2(12,43),Vector2(18,34),Vector2(25,31)]],
+			[Color("#edaa7d"),[Vector2(14,43),Vector2(18,37),Vector2(17,49),Vector2(12,62),Vector2(10,61)]],
+			[Color("#edaa7d"),[Vector2(43,37),Vector2(47,43),Vector2(51,61),Vector2(48,64),Vector2(44,49)]],
+			[Color("#f0d9cb"),[Vector2(21,32),Vector2(25,32),Vector2(30,38),Vector2(36,32),Vector2(40,32),Vector2(43,44),Vector2(40,65),Vector2(21,65),Vector2(18,44)]],
+			[Color("#b59aa1"),[Vector2(20,42),Vector2(25,48),Vector2(24,58),Vector2(31,62),Vector2(21,63)]],
+			[Color("#c8aab0"),[Vector2(40,42),Vector2(35,48),Vector2(36,57),Vector2(31,62),Vector2(40,63)]],
+			[Color("#425570"),[Vector2(20,69),Vector2(41,69),Vector2(40,88),Vector2(32,88),Vector2(30,76),Vector2(28,88),Vector2(20,88)]],
+			[Color("#36282d"),[Vector2(23,7),Vector2(28,4),Vector2(37,5),Vector2(40,10),Vector2(38,21),Vector2(34,25),Vector2(25,24),Vector2(21,18)]]
+		]
+		for shape in shapes:
+			var points := PackedVector2Array(shape[1])
+			for y in range(88):
+				for x in range(61):
+					if Geometry2D.is_point_in_polygon(Vector2(x+0.5,y+0.5),points):
+						img.set_pixel(x,y,shape[0])
+		img.fill_rect(Rect2i(21,66,20,3),Color("#654039"))
+		img.fill_rect(Rect2i(23,72,5,7),Color("#61718a"))
+		img.fill_rect(Rect2i(34,72,5,7),Color("#61718a"))
+		img.fill_rect(Rect2i(26,7,9,2),Color("#674039"))
+		return ImageTexture.create_from_image(img)
