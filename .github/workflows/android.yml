@@ -24,12 +24,14 @@ jobs:
       - name: Configure Android
         run: |
           mkdir -p ~/.android ~/.config/godot build
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          adb start-server
           keytool -genkeypair -keystore ~/.android/debug.keystore -storepass android -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           printf '[gd_resource type="EditorSettings" format=3]\n\n[resource]\nexport/android/java_sdk_path = "%s"\nexport/android/android_sdk_path = "%s"\nexport/android/debug_keystore = "%s/.android/debug.keystore"\n' "$JAVA_HOME" "$ANDROID_HOME" "$HOME" > ~/.config/godot/editor_settings-4.4.tres
       - name: Export APK
         run: |
-          godot --headless --editor --import --path .
-          godot --headless --path . --export-debug Android build/Leonida.apk
+          godot --headless --editor --import --path . --quit
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$HOME/.android/debug.keystore" GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android godot --headless --verbose --path . --export-debug Android build/Leonida.apk
           test -s build/Leonida.apk
       - uses: actions/upload-artifact@v4
         with:
