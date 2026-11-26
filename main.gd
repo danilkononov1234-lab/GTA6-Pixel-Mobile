@@ -1,303 +1,141 @@
 extends Node3D
-var player: CharacterBody3D
-var camera: Camera3D
-var pedestrians: Array[Node3D] = []
-var hud: Label
-var radar: Control
-var hero: Node3D
-var stride := 0.0
-var textures := {}
-var mission := 0
-var cash := 0
-var cars: Array[CharacterBody3D] = []
-var driving: CharacterBody3D
-var movement := Vector2.ZERO
-var buttons := {}
-var rng := RandomNumberGenerator.new()
 
-func block(pos: Vector3, dimensions: Vector3, color: Color, solid := true) -> Node3D:
-	var root := StaticBody3D.new()
-	add_child(root)
-	root.position = pos
-	var mesh := MeshInstance3D.new()
-	var shape := BoxMesh.new()
-	shape.size = dimensions
-	mesh.mesh = shape
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = color
-	mat.albedo_texture = pixel_texture()
-	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-	mesh.material_override = mat
-	root.add_child(mesh)
-	if solid:
-		var collision := CollisionShape3D.new()
-		var box := BoxShape3D.new()
-		box.size = dimensions
-		collision.shape = box
-		root.add_child(collision)
-	return root
-
+var view: Street
 func _ready():
-	rng.seed = 2026
-	var env := WorldEnvironment.new()
-	env.environment = Environment.new()
-	env.environment.background_mode = Environment.BG_COLOR
-	env.environment.background_color = Color("#85c9ef")
-	env.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.environment.ambient_light_color = Color.WHITE
-	env.environment.ambient_light_energy = 0.65
-	add_child(env)
-	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-55,-35,0)
-	add_child(sun)
-	block(Vector3(0,-0.5,0),Vector3(400,1,400),Color("#aaa58d"))
-	for x in range(-5,6):
-		block(Vector3(x*32,0.02,0),Vector3(9,0.04,380),Color("#444752"),false)
-		block(Vector3(0,0.03,x*32),Vector3(380,0.04,9),Color("#444752"),false)
-	for x in range(-5,5):
-		for z in range(-5,5):
-			var h := rng.randf_range(5,25)
-			block(Vector3(x*32+16,h/2,z*32+16),Vector3(17,h,17),Color.from_hsv(rng.randf(),0.27,0.85))
-			for floor_index in range(1,int(h/3)):
-				for column in range(-2,3):
-					block(Vector3(x*32+16+column*3,floor_index*3,z*32+24.55),Vector3(1.7,1.6,0.12),Color("#40576a"),false)
-					block(Vector3(x*32+16+column*3,floor_index*3,z*32+7.45),Vector3(1.7,1.6,0.12),Color("#40576a"),false)
-	for road in range(-5,6):
-		for stripe in range(-30,31):
-			block(Vector3(road*32,0.065,stripe*6),Vector3(0.13,0.02,2.5),Color("#e7d6a0"),false)
-			block(Vector3(stripe*6,0.07,road*32),Vector3(2.5,0.02,0.13),Color("#e7d6a0"),false)
-	# Coastal district and island causeway
-	block(Vector3(0,-0.35,205),Vector3(400,0.5,10),Color("#e8cf91"))
-	block(Vector3(0,-0.8,280),Vector3(600,0.3,150),Color("#268fae"),false)
-	block(Vector3(0,-0.5,275),Vector3(12,1,150),Color("#555b64"))
-	block(Vector3(0,-0.5,370),Vector3(120,1,60),Color("#d6c69a"))
-	for i in range(16):
-		var p := Vector3(-180+i*23,0,190)
-		block(p+Vector3(0,2,0),Vector3(0.45,4,0.45),Color("#856341"),false)
-		for j in range(5):
-			var leaf := block(p+Vector3(0,4,0),Vector3(0.8,0.25,3.5),Color("#388d50"),false)
-			leaf.rotation.y = j*TAU/5
-	for i in range(8):
-		block(Vector3(-48+i*13,2,375),Vector3(9,4,12),Color("#f2b69d"))
-	player = CharacterBody3D.new()
-	add_child(player)
-	player.position = Vector3(0,1,0)
-	var collider := CollisionShape3D.new()
-	var capsule := CapsuleShape3D.new()
-	capsule.height = 1.8
-	capsule.radius = 0.35
-	collider.shape = capsule
-	collider.name = "CollisionShape3D"
-	player.add_child(collider)
-	var avatar := MeshInstance3D.new()
-	var body := CapsuleMesh.new()
-	body.height = 1.8
-	body.radius = 0.35
-	avatar.mesh = body
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color("#e86c80")
-	avatar.material_override = mat
-	avatar.hide()
-	player.add_child(avatar)
-	var human := Node3D.new()
-	human.name = "Human"
-	hero = human
-	human.hide()
-	player.add_child(human)
-	for part in [[Vector3(0,0.18,0),Vector3(0.48,0.65,0.28),Color("#eee6d2")],[Vector3(0,0.66,0),Vector3(0.29,0.32,0.29),Color("#bc825c")],[Vector3(0,0.84,0),Vector3(0.31,0.12,0.31),Color("#30251f")],[Vector3(-0.32,0.12,0),Vector3(0.14,0.59,0.17),Color("#bc825c")],[Vector3(0.32,0.12,0),Vector3(0.14,0.59,0.17),Color("#bc825c")],[Vector3(-0.13,-0.48,0),Vector3(0.22,0.67,0.24),Color("#344b68")],[Vector3(0.13,-0.48,0),Vector3(0.22,0.67,0.24),Color("#344b68")]]:
-		var limb := MeshInstance3D.new()
-		var cube := BoxMesh.new()
-		cube.size = part[1]
-		limb.mesh = cube
-		limb.position = part[0]
-		var surface := StandardMaterial3D.new()
-		surface.albedo_color = part[2]
-		surface.albedo_texture = pixel_texture()
-		surface.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-		limb.material_override = surface
-		human.add_child(limb)
-	var sprite := Sprite3D.new()
-	sprite.texture = hero_sprite()
-	sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-	sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	sprite.pixel_size = 0.035
-	sprite.position.y = 0.15
-	player.add_child(sprite)
-	for i in range(12):
-		var car := CharacterBody3D.new()
-		add_child(car)
-		car.position = Vector3(2,0.65,8+i*12)
-		var hit := CollisionShape3D.new()
-		var bounds := BoxShape3D.new()
-		bounds.size = Vector3(2,1.3,4)
-		hit.shape = bounds
-		car.add_child(hit)
-		var body_mesh := MeshInstance3D.new()
-		var car_box := BoxMesh.new()
-		car_box.size = Vector3(2,0.8,4)
-		body_mesh.mesh = car_box
-		var paint := StandardMaterial3D.new()
-		paint.albedo_color = Color.from_hsv(rng.randf(),0.8,0.8)
-		body_mesh.material_override = paint
-		car.add_child(body_mesh)
-		var cabin := MeshInstance3D.new()
-		var cabin_box := BoxMesh.new()
-		cabin_box.size = Vector3(1.6,0.65,1.9)
-		cabin.mesh = cabin_box
-		cabin.position.y = 0.6
-		var glass := StandardMaterial3D.new()
-		glass.albedo_color = Color("#34495e")
-		cabin.material_override = glass
-		car.add_child(cabin)
-		cars.append(car)
-	camera = Camera3D.new()
-	add_child(camera)
-	camera.current = true
-	camera.position = player.position + Vector3(0,1.15,2.8)
-	camera.look_at(player.position)
-	for i in range(24):
-		var npc := Node3D.new()
-		add_child(npc)
-		npc.position = Vector3(5.5,0,-140+i*12)
-		var model := MeshInstance3D.new()
-		var mesh := CapsuleMesh.new()
-		mesh.height = 1.65
-		mesh.radius = 0.28
-		model.mesh = mesh
-		model.position.y = 0.85
-		var material := StandardMaterial3D.new()
-		material.albedo_color = Color.from_hsv(rng.randf(),0.6,0.85)
-		model.material_override = material
-		npc.add_child(model)
-		pedestrians.append(npc)
-	var ui := CanvasLayer.new()
-	add_child(ui)
-	var label := Label.new()
-	hud = label
-	label.text = "LEONIDA • ПРОТОТИП"
-	label.position = Vector2(16,12)
-	ui.add_child(label)
-	radar = Radar.new()
-	radar.world = self
-	radar.position = Vector2(12,125)
-	radar.size = Vector2(100,100)
-	ui.add_child(radar)
-	for item in [["↑",Vector2(60,235),Vector2(0,-1)],["↓",Vector2(60,300),Vector2(0,1)],["←",Vector2(5,300),Vector2(-1,0)],["→",Vector2(115,300),Vector2(1,0)]]:
-		var b := Button.new()
-		b.text = item[0]
-		b.position = item[1]
-		b.size = Vector2(52,52)
-		ui.add_child(b)
-		buttons[b] = item[2]
-		b.button_down.connect(func(): b.set_meta("held",true))
-		b.button_up.connect(func(): b.set_meta("held",false))
+	view = Street.new()
+	add_child(view)
 
-	var enter := Button.new()
-	enter.text = "Сесть / выйти"
-	enter.position = Vector2(480,280)
-	enter.size = Vector2(145,60)
-	ui.add_child(enter)
-	enter.pressed.connect(toggle_car)
-
-func toggle_car():
-	if is_instance_valid(driving):
-		player.position = driving.position + driving.transform.basis.x * 2.5 + Vector3.UP
-		player.show()
-		player.get_node("CollisionShape3D").set_deferred("disabled",false)
-		driving = null
-		return
-	for car in cars:
-		if player.position.distance_to(car.position) < 5:
-			driving = car
-			player.hide()
-			player.get_node("CollisionShape3D").set_deferred("disabled",true)
-			break
-
-func _physics_process(delta):
-	radar.queue_redraw()
-	for i in range(pedestrians.size()):
-		var npc := pedestrians[i]
-		npc.position.z += delta * (1.2 if i % 2 == 0 else -1.2)
-		if absf(npc.position.z) > 175:
-			npc.position.z = -signf(npc.position.z)*174
-	if mission == 0 and player.position.z > 180:
-		mission = 1
-		cash += 250
-	if mission == 1 and player.position.z > 350:
-		mission = 2
-		cash += 500
-	hud.text = "LEONIDA   $%d   HP 100\n%s" % [cash, ["Доберись до пляжа","Пересеки мост","Задания выполнены"][mission]]
-	movement = Input.get_vector("ui_left","ui_right","ui_up","ui_down")
-	for b in buttons:
-		if b.button_pressed or (b.has_meta("held") and b.get_meta("held")):
-			movement += buttons[b]
-	movement = movement.limit_length()
-	if is_instance_valid(driving):
-		driving.rotate_y(-movement.x*delta*1.8)
-		driving.velocity = driving.transform.basis.z * movement.y * 20
-		driving.move_and_slide()
-		player.position = driving.position
-		camera.position = camera.position.lerp(driving.position + driving.transform.basis.z*8 + Vector3.UP*4, minf(delta*6,1))
-		camera.look_at(driving.position)
-		return
-	player.velocity.x = movement.x*7
-	player.velocity.z = movement.y*7
-	if not player.is_on_floor():
-		player.velocity.y -= 20*delta
-	player.move_and_slide()
-	if movement.length() > 0.1:
-		hero.rotation.y = atan2(-movement.x,-movement.y)
-		stride += delta*11
-	else:
-		stride = 0.0
-	for i in range(3,7):
-		hero.get_child(i).rotation.x = sin(stride) * (0.55 if i % 2 == 0 else -0.55)
-	camera.position = camera.position.lerp(player.position+Vector3(0,1.15,2.8),minf(delta*8,1))
-	camera.look_at(player.position+Vector3(0,0.9,-2))
-
-func pixel_texture() -> ImageTexture:
-	if textures.has("grain"):
-		return textures["grain"]
-	var img := Image.create(16,16,false,Image.FORMAT_RGB8)
-	for y in range(16):
-		for x in range(16):
-			var v := 0.76 + float((x*17+y*31+x*y*7)%8)*0.032
-			img.set_pixel(x,y,Color(v,v,v))
-	var tex := ImageTexture.create_from_image(img)
-	textures["grain"] = tex
-	return tex
-
-class Radar extends Control:
-	var world: Node3D
+class Street extends Node2D:
+	var distance := 0.0
+	var lane := 0.0
+	var walking := false
+	var driving := false
+	var controls := {}
+	var cash := 0
+	func _ready():
+		texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		for item in [["↑",Vector2(65,245)],["↓",Vector2(65,300)],["←",Vector2(10,300)],["→",Vector2(120,300)],["Сесть / выйти",Vector2(475,300)]]:
+			var b := Button.new()
+			b.text = item[0]
+			b.position = item[1]
+			b.size = Vector2(52,50) if item[0].length()==1 else Vector2(150,50)
+			b.focus_mode = Control.FOCUS_NONE
+			add_child(b)
+			controls[item[0]] = b
+			if item[0].length()>1:
+				b.pressed.connect(func(): driving = not driving)
+	func _process(dt):
+		var v := Input.get_vector("ui_left","ui_right","ui_up","ui_down")
+		if controls["↑"].button_pressed: v.y -= 1
+		if controls["↓"].button_pressed: v.y += 1
+		if controls["←"].button_pressed: v.x -= 1
+		if controls["→"].button_pressed: v.x += 1
+		walking = v.length()>0.1
+		distance += -v.y*dt*(24.0 if driving else 7.0)
+		lane = clampf(lane+v.x*dt*2.0,-2.8,2.8)
+		queue_redraw()
+	func poly(points: Array, c: String):
+		draw_colored_polygon(PackedVector2Array(points),Color(c))
+	func rect(x:float,y:float,w:float,h:float,c:String):
+		draw_rect(Rect2(x,y,w,h),Color(c))
+	func project(x:float,y:float,z:float)->Vector2:
+		var k := 145.0/maxf(z,0.5)
+		return Vector2(320+(x-lane)*k,125+(2.1-y)*k)
 	func _draw():
-		var center := Vector2(50,50)
-		draw_circle(center,49,Color("#17282e"))
-		var p: Vector3 = world.player.position
-		for x in range(-5,6):
-			for z in range(-5,6):
-				var q := center + Vector2(x*32-p.x,z*32-p.z)*0.55
-				if q.distance_to(center)<43:
-					draw_rect(Rect2(q-Vector2(6,6),Vector2(12,12)),Color("#a7a08b"))
-		for x in range(-5,6):
-			var offset := (x*32-p.x)*0.55
-			if absf(offset)<44:
-				var extent := sqrt(44.0*44.0-offset*offset)
-				draw_line(center+Vector2(offset,-extent),center+Vector2(offset,extent),Color("#687a83"),3)
-			offset = (x*32-p.z)*0.55
-			if absf(offset)<44:
-				var extent := sqrt(44.0*44.0-offset*offset)
-				draw_line(center+Vector2(-extent,offset),center+Vector2(extent,offset),Color("#687a83"),3)
-		draw_arc(center,48,0,TAU,48,Color.WHITE,2)
-		draw_colored_polygon(PackedVector2Array([center+Vector2(0,-6),center+Vector2(-4,5),center+Vector2(4,5)]),Color.WHITE)
-
-func hero_sprite() -> ImageTexture:
-	var img := Image.create(40,64,false,Image.FORMAT_RGBA8)
-	img.fill(Color.TRANSPARENT)
-	var outline := Color("#29212b")
-	var skin := Color("#b77c53")
-	var light := Color("#d99c70")
-	var shirt := Color("#eee5cd")
-	var denim := Color("#38516a")
-	for part in [[Rect2i(13,2,14,16),outline],[Rect2i(15,4,10,12),skin],[Rect2i(14,3,12,8),Color("#392c29")],[Rect2i(17,16,6,5),skin],[Rect2i(9,19,22,25),outline],[Rect2i(12,20,16,22),shirt],[Rect2i(5,22,8,25),outline],[Rect2i(27,22,8,25),outline],[Rect2i(7,24,5,21),skin],[Rect2i(28,24,5,21),light],[Rect2i(11,42,18,7),outline],[Rect2i(12,45,7,15),denim],[Rect2i(21,45,7,15),denim],[Rect2i(11,59,9,4),outline],[Rect2i(20,59,9,4),outline],[Rect2i(13,23,2,17),Color("#b9b4a4")],[Rect2i(24,23,2,17),Color("#fff7e1")],[Rect2i(14,40,12,2),Color("#aaa394")],[Rect2i(15,46,2,12),Color("#526c85")],[Rect2i(23,46,2,12),Color("#526c85")]]:
-		img.fill_rect(part[0],part[1])
-	return ImageTexture.create_from_image(img)
+		rect(0,0,640,360,"#86c9d6")
+		rect(0,125,640,235,"#d8bba0")
+		for i in range(22):
+			var x := float(i*31)
+			var h := float(12+(i*37)%65)
+			rect(x,125-h,25,h,"#7596a5")
+			for j in range(int(h/9)):
+				rect(x+4,125-h+j*9,3,4,"#c1d3cf")
+		poly([Vector2(305,125),Vector2(335,125),project(4,0,1.25),project(-4,0,1.25)],"#454b59")
+		for i in range(40,0,-1):
+			var z := float(i)*3.0-fposmod(distance,3.0)
+			if z<1.4: continue
+			for side in [-1,1]:
+				var a := project(side*4.0,0,z)
+				var b := project(side*4.0,0,z+2.8)
+				draw_line(a,b,Color("#f0d6ae"),maxf(1,3/z))
+			poly([project(-0.06,0,z),project(0.06,0,z),project(0.06,0,z+1.2),project(-0.06,0,z+1.2)],"#e9ce83")
+		for i in range(18,0,-1):
+			var z := float(i)*7.0-fposmod(distance,7.0)
+			if z<2.0: continue
+			for side in [-1,1]:
+				facade(float(side),z,i)
+				if i%2==0: palm(float(side)*5.1,z)
+		car(1.8,7.0+fposmod(-distance,10.0))
+		if driving: car(0,1.8)
+		else: hero()
+		draw_circle(Vector2(52,190),40,Color("#273b46"))
+		for i in range(-2,3):
+			var q := float(i*15)
+			var e := sqrt(36.0*36.0-q*q)
+			draw_line(Vector2(52+q,190-e),Vector2(52+q,190+e),Color("#a6a69a"),3)
+			draw_line(Vector2(52-e,190+q),Vector2(52+e,190+q),Color("#a6a69a"),3)
+		draw_circle(Vector2(52,190),4,Color.WHITE)
+		draw_arc(Vector2(52,190),40,0,TAU,48,Color("#e8d9b5"),2)
+		var font := ThemeDB.fallback_font
+		draw_string(font,Vector2(465,25),"$%06d  HP 100"%cash,HORIZONTAL_ALIGNMENT_LEFT,-1,16,Color.WHITE)
+		draw_string(font,Vector2(465,43),"LEONIDA",HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("#fff0c5"))
+	func facade(side:float,z:float,i:int):
+		var x := side*6.0
+		var h := float(4+i%4)
+		var a := project(x,0,z)
+		var b := project(x,0,z+6.5)
+		var c := project(x,h,z+6.5)
+		var d := project(x,h,z)
+		var palette := ["#e0b797","#d5c7a4","#b4c7bc","#d9a6a0"]
+		poly([a,b,c,d],palette[i%4])
+		poly([a,project(x+side*4,0,z),project(x+side*4,h,z),d],"#8c8b83")
+		for floor_i in range(int(h/1.5)):
+			var y := 0.45+floor_i*1.5
+			for j in range(3):
+				var zz := z+0.5+j*2.0
+				poly([project(x,y,zz),project(x,y,zz+1.15),project(x,y+0.85,zz+1.15),project(x,y+0.85,zz)],"#405762")
+				draw_line(project(x,y+0.4,zz),project(x,y+0.4,zz+1.15),Color("#91a5a1"),1)
+		draw_line(a,b,Color("#776f67"),2)
+		draw_line(d,c,Color("#fff0d0"),2)
+	func palm(x:float,z:float):
+		var p := project(x,0,z)
+		var t := project(x+0.35,4.7,z)
+		var k := 145.0/z
+		draw_line(p,t,Color("#735a43"),maxf(1,k*0.18))
+		for j in range(7):
+			var angle := float(j)*TAU/7.0
+			var end := t+Vector2(cos(angle)*k*1.35,sin(angle)*k*0.48+absf(cos(angle))*k*0.3)
+			poly([t,t+Vector2(0,-k*0.2),end,t.lerp(end,0.6)+Vector2(0,k*0.16)],"#376e53" if j%2==0 else "#50834c")
+	func car(x:float,z:float):
+		var p := project(x,0,z)
+		var k := 145.0/z
+		draw_rect(Rect2(p-Vector2(k*0.95,k*0.55),Vector2(k*1.9,k*0.65)),Color("#252936"))
+		for side in [-1,1]:
+			draw_circle(p+Vector2(side*k*0.73,0),k*0.22,Color("#20232b"))
+		poly([p+Vector2(-k,-k*0.2),p+Vector2(-k*0.85,-k*0.65),p+Vector2(k*0.85,-k*0.65),p+Vector2(k,-k*0.2)],"#d7d5bb")
+		poly([p+Vector2(-k*0.7,-k*0.65),p+Vector2(-k*0.45,-k*1.05),p+Vector2(k*0.45,-k*1.05),p+Vector2(k*0.7,-k*0.65)],"#394d5e")
+		for side in [-1,1]:
+			draw_rect(Rect2(p+Vector2(side*k*0.68-k*0.15,-k*0.35),Vector2(k*0.3,k*0.13)),Color("#d84b49"))
+	func hero():
+		var p := Vector2(320,245)
+		var bob := sin(Time.get_ticks_msec()*0.012)*2.0 if walking else 0.0
+		p.y += bob
+		draw_set_transform(p,0,Vector2(1.4,1.4))
+		draw_ellipse_shadow()
+		poly([Vector2(-12,12),Vector2(12,12),Vector2(10,48),Vector2(1,48),Vector2(0,24),Vector2(-3,48),Vector2(-12,48)],"#283d56")
+		rect(-11,19,4,26,"#50647b")
+		rect(5,19,4,26,"#50647b")
+		rect(-13,47,12,4,"#24252b")
+		rect(1,47,12,4,"#24252b")
+		poly([Vector2(-9,-25),Vector2(-19,-20),Vector2(-23,-4),Vector2(-21,13),Vector2(-16,16),Vector2(-13,-5),Vector2(-8,-13)],"#a96e4d")
+		poly([Vector2(9,-25),Vector2(19,-20),Vector2(23,-4),Vector2(21,13),Vector2(16,16),Vector2(13,-5),Vector2(8,-13)],"#c38a60")
+		poly([Vector2(-10,-26),Vector2(-15,-18),Vector2(-11,12),Vector2(11,12),Vector2(15,-18),Vector2(10,-26),Vector2(5,-18),Vector2(-5,-18)],"#e9dfc8")
+		poly([Vector2(-11,-15),Vector2(-7,-12),Vector2(-8,6),Vector2(-3,10),Vector2(-11,10)],"#b5ad9e")
+		rect(-10,12,20,4,"#43352f")
+		rect(-5,-31,10,12,"#a96e4d")
+		poly([Vector2(-9,-46),Vector2(-5,-50),Vector2(6,-50),Vector2(10,-45),Vector2(9,-33),Vector2(5,-29),Vector2(-6,-29),Vector2(-10,-35)],"#b87e56")
+		poly([Vector2(-10,-46),Vector2(-6,-51),Vector2(6,-51),Vector2(11,-46),Vector2(9,-36),Vector2(5,-34),Vector2(-7,-35),Vector2(-10,-40)],"#352b2a")
+		rect(-6,-48,10,2,"#594039")
+		draw_set_transform(Vector2.ZERO)
+	func draw_ellipse_shadow():
+		draw_colored_polygon(PackedVector2Array([Vector2(-20,49),Vector2(-12,45),Vector2(15,45),Vector2(23,49),Vector2(14,53),Vector2(-15,53)]),Color("#30343b"))
